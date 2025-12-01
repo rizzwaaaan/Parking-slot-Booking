@@ -166,10 +166,11 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
                       top: h * 0.09,
                       child: Text(
                         "PARQX",
-                        style: GoogleFonts.poppins(
-                          fontSize: 64,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                        style: GoogleFonts.montserrat(
+                          fontSize: 60,
+                          fontWeight: FontWeight.w700,
+                          color: const Color.fromARGB(
+                              255, 73, 73, 73), // ← UPDATED COLOR
                         ),
                       ),
                     ),
@@ -208,6 +209,7 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
               SizedBox(height: h * 0.04),
 
               // ---------------- PHONE INPUT ----------------
+// ---------------- PHONE INPUT ----------------
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Container(
@@ -218,12 +220,31 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.phone, color: Colors.blueAccent),
-                      const SizedBox(width: 10),
+                      // --- STATIC COUNTRY CODE ---
+                      Text(
+                        "+91",
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      Container(
+                        width: 1.2,
+                        height: 24,
+                        color: Colors.grey[400],
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      // -------- INPUT FIELD --------
                       Expanded(
                         child: TextField(
                           controller: _phoneController,
-                          keyboardType: TextInputType.phone,
+                          keyboardType: TextInputType.number,
                           style: GoogleFonts.poppins(
                             fontSize: 16,
                             color: Colors.black,
@@ -235,13 +256,12 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
                             focusedBorder: InputBorder.none,
-                            errorBorder: InputBorder.none,
-                            hintText: "+91",
+                            hintText: "123456789",
                             hintStyle: GoogleFonts.poppins(
                               color: Colors.grey,
                             ),
                             contentPadding: EdgeInsets.symmetric(
-                              vertical: h * 0.02,
+                              vertical: size.height * 0.02,
                             ),
                           ),
                         ),
@@ -262,7 +282,7 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _verifyPhone,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
+                      backgroundColor: const Color(0xFF67009B),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -307,7 +327,7 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
                       child: Text(
                         "Sign up",
                         style: GoogleFonts.poppins(
-                          color: Colors.blueAccent,
+                          color: const Color(0xFF67009B),
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
