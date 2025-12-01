@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:parking_booking/splash_screen.dart';
 import 'package:parking_booking/user_login_screen.dart';
-import 'loading-screen.dart' hide LoadingScreen;
 
 // ------------------------------------------------------------
 // ⭐ GLOBAL SMOOTH NAVIGATION (USED BY ENTIRE APPLICATION)
@@ -154,7 +154,7 @@ class ParkingApp extends StatelessWidget {
       ),
       // --- END THEME ---
 
-      home: const LoadingScreen(),
+      home: const SplashScreen(),
     );
   }
 }
