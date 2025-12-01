@@ -61,7 +61,7 @@ class _BookingScreenState extends State<BookingScreen> {
   // Colours & theme (exact hex values from your spec)
   static const Color backgroundColor = Color(0xFFF7F7F9);
   static const Color cardBg = Color(0xFFFFFFFF);
-  static const Color accent = Color(0xFF7B61FF);
+  static const Color accent = Color(0xFF67009B);
   static const Color gold = Color(0xFFFCC417);
   static const Color subtleText = Color(0xFF9AA0A6);
   static const Color titleText = Color(0xFF222222);
@@ -213,7 +213,6 @@ class _BookingScreenState extends State<BookingScreen> {
     final double opacity = lerpDouble(1.0, 0.70, t)!;
     final double translateY = lerpDouble(0.0, -24.0, t)!;
 
-    // Positioned so it sits above the sheet
     return Positioned(
       top: translateY,
       left: 0,
@@ -223,7 +222,7 @@ class _BookingScreenState extends State<BookingScreen> {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            // Image with rounded bottom corners
+            // Background Image
             ClipRRect(
               borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(26),
@@ -253,52 +252,59 @@ class _BookingScreenState extends State<BookingScreen> {
               ),
             ),
 
-            // Back button (floating circle) - overlay on top-left (keeps breathing space)
+            // Top Row: Back Button + Parking Name
             Positioned(
               top: 16,
               left: 14,
-              child: Material(
-                color: Colors.transparent,
-                child: Container(
-                  height: 44,
-                  width: 44,
-                  decoration: BoxDecoration(
-                    color: cardBg,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
+              right: 14,
+              child: Row(
+                children: [
+                  // Back Button
+                  Container(
+                    height: 44,
+                    width: 44,
+                    decoration: BoxDecoration(
+                      color: cardBg,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
                           color: Colors.black.withOpacity(0.12),
                           blurRadius: 8,
-                          offset: const Offset(0, 3)),
-                    ],
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      splashRadius: 22,
+                      icon:
+                          const Icon(Icons.arrow_back, color: AppColors.accent),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
                   ),
-                  child: IconButton(
-                    splashRadius: 22,
-                    icon: const Icon(Icons.arrow_back, color: Colors.black),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ),
-              ),
-            ),
 
-            // Parking name bottom-left overlay (white text with subtle shadow)
-            Positioned(
-              left: 18,
-              bottom: 16,
-              child: Text(
-                widget.location,
-                style: GoogleFonts.poppins(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black.withOpacity(0.55),
-                      offset: const Offset(0, 2),
-                      blurRadius: 6,
-                    )
-                  ],
-                ),
+                  const SizedBox(width: 12),
+
+                  // Parking Name
+                  Expanded(
+                    child: Text(
+                      widget.location,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 21,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black.withOpacity(0.55),
+                            offset: const Offset(0, 2),
+                            blurRadius: 6,
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -406,7 +412,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
           Text(widget.location,
               style: GoogleFonts.poppins(
-                  fontSize: 18, fontWeight: FontWeight.w700, color: titleText)),
+                  fontSize: 18, fontWeight: FontWeight.w700, color: accent)),
           const SizedBox(height: 6),
 
           Row(
@@ -720,11 +726,17 @@ class _BookingScreenState extends State<BookingScreen> {
             }),
 
             // Draggable sheet (keeps content centered and notch-safe)
+            // Draggable sheet (keeps content centered and notch-safe)
             DraggableScrollableSheet(
               controller: _draggableController,
-              initialChildSize: _sheetInitial,
-              minChildSize: _sheetMin,
-              maxChildSize: _sheetMax,
+
+              // FINAL PERFECT SNAP CONFIG
+              initialChildSize: 0.60,
+              minChildSize: 0.60,
+              maxChildSize: 0.90,
+              snap: true,
+              snapSizes: const [0.60, 0.90],
+
               builder: (context, scrollController) {
                 return Container(
                   decoration: BoxDecoration(
@@ -749,11 +761,9 @@ class _BookingScreenState extends State<BookingScreen> {
                             return SingleChildScrollView(
                               controller: scrollController,
                               physics: const BouncingScrollPhysics(),
-                              // IMPORTANT: apply EXACT padding here as requested
                               child: Column(
                                 children: [
                                   const SizedBox(height: 8),
-                                  // bottom sheet content has its own inner padding (18,18)
                                   _buildBottomSheetContent(constraints),
                                 ],
                               ),
@@ -761,8 +771,6 @@ class _BookingScreenState extends State<BookingScreen> {
                           },
                         ),
                       ),
-
-                      // FIXED CTA ROW (keeps safe area at bottom)
                       SafeArea(
                         top: false,
                         child: _buildBottomActionBar(),

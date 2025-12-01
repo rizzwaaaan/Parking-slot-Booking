@@ -1,12 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:parking_booking/splash_screen.dart';
 import 'package:parking_booking/user_login_screen.dart';
-import 'loading-screen.dart'
-    hide LoadingScreen; // Import the new loading screen
+
+// ------------------------------------------------------------
+// ⭐ GLOBAL SMOOTH NAVIGATION (USED BY ENTIRE APPLICATION)
+// ------------------------------------------------------------
+void pushSmooth(BuildContext context, Widget page) {
+  Navigator.of(context).push(
+    PageRouteBuilder(
+      transitionDuration: const Duration(milliseconds: 260),
+      reverseTransitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (_, animation, secondaryAnimation) => FadeTransition(
+        opacity: animation,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.96, end: 1.0).animate(
+            CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            ),
+          ),
+          child: page,
+        ),
+      ),
+    ),
+  );
+}
+// ------------------------------------------------------------
 
 // --- THEME COLORS ---
 class AppColors {
-  static const Color appBackground = Color(0xFF1C1C1E);
+  static const Color appBackground =
+      Color(0xFF1C1C1E); // ADDED COMMENT IMPROVED
   static const Color cardSurface = Color(0xFF2C2C2E);
   static const Color appBarColor = Color(0xFF1C1C1E);
   static const Color searchBarColor = Color(0xFF2C2C2E);
@@ -15,15 +40,15 @@ class AppColors {
   static const Color primaryText = Color(0xFFFFFFFF);
   static const Color secondaryText = Color(0xFFB0B0B5);
   static const Color hintText = Color(0xFF8E8E93);
-  static const Color darkText = Color(0xFF000000); // For white buttons
+  static const Color darkText = Color(0xFF000000);
 
-  static const Color markerColor = Color(0xFF0A84FF); // Blue accent
+  static const Color markerColor = Color(0xFF0A84FF);
   static const Color routeColor = Color(0xFF5AC8FA);
   static const Color outlinedButtonColor = Color(0xFF8E8E93);
   static const Color elevatedButtonBg = Color(0xFFFFFFFF);
 
   static const Color shadow = Color.fromRGBO(0, 0, 0, 0.3);
-  static const Color errorRed = Color(0xFFD32F2F); // A dark red for errors
+  static const Color errorRed = Color(0xFFD32F2F);
 }
 // --- END THEME COLORS ---
 
@@ -46,8 +71,6 @@ class ParkingApp extends StatelessWidget {
         primaryColor: AppColors.markerColor,
         scaffoldBackgroundColor: AppColors.appBackground,
         fontFamily: GoogleFonts.poppins().fontFamily,
-
-        // Color Scheme
         colorScheme: const ColorScheme.dark(
           primary: AppColors.markerColor,
           secondary: AppColors.routeColor,
@@ -60,11 +83,9 @@ class ParkingApp extends StatelessWidget {
           error: AppColors.errorRed,
           onError: AppColors.primaryText,
         ),
-
-        // AppBar Theme
         appBarTheme: AppBarTheme(
           backgroundColor: AppColors.appBarColor,
-          foregroundColor: AppColors.primaryText, // For back button and title
+          foregroundColor: AppColors.primaryText,
           elevation: 0,
           centerTitle: true,
           titleTextStyle: GoogleFonts.poppins(
@@ -73,8 +94,6 @@ class ParkingApp extends StatelessWidget {
             color: AppColors.primaryText,
           ),
         ),
-
-        // ElevatedButton Theme
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.elevatedButtonBg,
@@ -85,8 +104,6 @@ class ParkingApp extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           ),
         ),
-
-        // OutlinedButton Theme
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.primaryText,
@@ -97,15 +114,11 @@ class ParkingApp extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           ),
         ),
-
-        // TextButton Theme
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
-            foregroundColor: AppColors.markerColor, // Blue accent
+            foregroundColor: AppColors.markerColor,
           ),
         ),
-
-        // TextField Theme
         inputDecorationTheme: InputDecorationTheme(
           labelStyle: const TextStyle(color: AppColors.hintText),
           hintStyle: const TextStyle(color: AppColors.hintText),
@@ -125,8 +138,6 @@ class ParkingApp extends StatelessWidget {
             borderSide: const BorderSide(color: AppColors.primaryText),
           ),
         ),
-
-        // Card Theme
         cardTheme: CardThemeData(
           color: AppColors.cardSurface,
           elevation: 4,
@@ -135,18 +146,15 @@ class ParkingApp extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
           ),
         ),
-
-        // Text Selection
         textSelectionTheme: const TextSelectionThemeData(
           cursorColor: AppColors.markerColor,
           selectionColor: AppColors.markerColor,
           selectionHandleColor: AppColors.markerColor,
         ),
       ),
-      // --- END OF THEME ---
+      // --- END THEME ---
 
-      // Set the home to the new LoadingScreen
-      home: const LoadingScreen(),
+      home: const SplashScreen(),
     );
   }
 }

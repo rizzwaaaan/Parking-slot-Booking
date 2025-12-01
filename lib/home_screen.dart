@@ -1,4 +1,3 @@
-// home_screen.dart
 import 'dart:convert';
 import 'dart:ui';
 import 'dart:math';
@@ -6,9 +5,12 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:parking_booking/main.dart';
+
 import 'booking_screen.dart';
 import 'my_bookings_screen.dart';
 import 'profile_screen.dart';
+import 'main_nav_screen.dart';
 import 'package:geolocator/geolocator.dart';
 
 class AppColors {
@@ -16,13 +18,11 @@ class AppColors {
   static const Color cardBg = Color(0xFFFFFFFF);
   static const Color subtleText = Color(0xFF9AA0A6);
   static const Color titleText = Color(0xFF222222);
-  static const Color accent = Color(0xFF7B61FF);
+  static const Color accent = Color(0xFF67009B);
   static const Color gold = Color(0xFFFCC417);
   static const Color glassBg = Color.fromRGBO(255, 255, 255, 0.15);
   static const Color shadow = Color.fromRGBO(33, 33, 33, 0.08);
   static const Color hint = Color(0xFFB0B0B5);
-  static const Color white = Colors.white;
-  static const Color error = Color(0xFFD32F2F);
 }
 
 class HomeScreen extends StatefulWidget {
@@ -34,6 +34,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // new index for bottom nav
+  int _navIndex = 0;
+
   String apiHost = 'backend-parking-bk8y.onrender.com';
 
   bool isLoading = true;
@@ -69,14 +72,11 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => isLoading = false);
   }
 
-  // -----------------------------------------------------------
-  // FIX 1: If GPS fails, fallback to Trivandrum coordinates
-  // -----------------------------------------------------------
   Future<void> _getDeviceLocation() async {
     try {
       bool enabled = await Geolocator.isLocationServiceEnabled();
       if (!enabled) {
-        _currentLocation = LatLng(8.5241, 76.9366); // Trivandrum
+        _currentLocation = LatLng(8.5241, 76.9366);
         return;
       }
 
@@ -101,9 +101,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // -----------------------------------------------------------
-  // FIX 2: Correct API route /api/users/profile/:phone
-  // -----------------------------------------------------------
   Future<void> _fetchUserProfile() async {
     try {
       final response = await http.get(
@@ -156,16 +153,13 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // -----------------------------------------------------------
-  // FIX 3: Parking with invalid lat/lng will still show
-  // -----------------------------------------------------------
   void _computeLists() {
     if (_currentLocation != null) {
       double lat = _currentLocation!.latitude;
       double lng = _currentLocation!.longitude;
 
       final withDist = parkingPlaces.map((p) {
-        if (p["validLocation"] == false) {
+        if (!p["validLocation"]) {
           return {...p, "distanceKm": 9999.0};
         }
         double d = _distanceInKm(lat, lng, p['lat'], p['lng']);
@@ -174,7 +168,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
       withDist.sort((a, b) => a['distanceKm'].compareTo(b['distanceKm']));
 
-      // FIX: remove 8km restriction → show all
       nearbyPlaces = withDist;
     }
 
@@ -194,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
   double _deg(double deg) => deg * pi / 180;
 
   String _eta(Map<String, dynamic> place) {
-    if (_currentLocation == null || place["validLocation"] == false) return "-";
+    if (_currentLocation == null || !place["validLocation"]) return "-";
 
     double dist = _distanceInKm(
       _currentLocation!.latitude,
@@ -209,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _formatKm(Map<String, dynamic> place) {
-    if (_currentLocation == null || place["validLocation"] == false) return "-";
+    if (_currentLocation == null || !place["validLocation"]) return "-";
     double dist = _distanceInKm(
       _currentLocation!.latitude,
       _currentLocation!.longitude,
@@ -238,11 +231,34 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Stack(
           children: [
             _buildMainContent(collapsedCardWidth),
+
+            // ⭐ USE NEW NAV BAR HERE ⭐
             Positioned(
               left: 16,
               right: 16,
               bottom: 18,
-              child: _buildGlassyNavBar(),
+              child: MainNavBar(
+                currentIndex: _navIndex,
+                onItemSelected: (index) {
+                  setState(() => _navIndex = index);
+
+                  if (index == 0) {
+                    // Current → do nothing
+                  } else if (index == 1) {
+                    // Map Screen (future)
+                  } else if (index == 2) {
+                    pushSmooth(
+                      context,
+                      MyBookingsScreen(phoneNumber: widget.phoneNumber),
+                    );
+                  } else if (index == 3) {
+                    pushSmooth(
+                      context,
+                      ProfileScreen(phoneNumber: widget.phoneNumber),
+                    );
+                  }
+                },
+              ),
             ),
           ],
         ),
@@ -250,9 +266,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // -----------------------------------------------------------
-  // UI COMPONENTS (unchanged, cleaned)
-  // -----------------------------------------------------------
+  // ---------- CONTENT UI ---------- //
+
   Widget _buildMainContent(double collapsedCardWidth) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
@@ -265,12 +280,15 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 16),
           _buildSearchBar(),
           const SizedBox(height: 18),
+
+          // Nearby Section
           _buildSectionHeader(
             "Nearby Parking",
             () => setState(() => nearbyExpanded = !nearbyExpanded),
             nearbyExpanded,
           ),
           const SizedBox(height: 12),
+
           isLoading
               ? const Center(child: CircularProgressIndicator())
               : nearbyExpanded
@@ -288,13 +306,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
+
           const SizedBox(height: 22),
+
+          // Popular Section
           _buildSectionHeader(
             "Popular Parking",
             () => setState(() => popularExpanded = !popularExpanded),
             popularExpanded,
           ),
           const SizedBox(height: 12),
+
           popularExpanded
               ? _buildFullWidthList(_applySearch(popularPlaces))
               : SizedBox(
@@ -310,6 +332,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
+
           const SizedBox(height: 120),
         ],
       ),
@@ -351,13 +374,14 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        InkWell(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ProfileScreen(phoneNumber: widget.phoneNumber),
-            ),
-          ),
+        GestureDetector(
+          onTap: () {
+            setState(() => _navIndex = 3);
+            pushSmooth(
+              context,
+              MyBookingsScreen(phoneNumber: widget.phoneNumber),
+            );
+          },
           child: Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
@@ -365,12 +389,13 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                    color: AppColors.shadow,
-                    blurRadius: 8,
-                    offset: const Offset(0, 4)),
+                  color: AppColors.shadow,
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                )
               ],
             ),
-            child: const Icon(Icons.person, color: AppColors.titleText),
+            child: const Icon(Icons.person, color: AppColors.accent),
           ),
         ),
       ],
@@ -383,7 +408,7 @@ class _HomeScreenState extends State<HomeScreen> {
       style: GoogleFonts.poppins(
         fontSize: 23,
         fontWeight: FontWeight.w600,
-        color: AppColors.titleText,
+        color: AppColors.accent,
         height: 1.05,
       ),
     );
@@ -393,21 +418,31 @@ class _HomeScreenState extends State<HomeScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title,
-            style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.titleText)),
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppColors.accent,
+          ),
+        ),
         InkWell(
           onTap: onTap,
           child: Row(
             children: [
-              Text("See all",
-                  style:
-                      GoogleFonts.poppins(color: AppColors.hint, fontSize: 13)),
+              Text(
+                "See all",
+                style: GoogleFonts.poppins(
+                  color: AppColors.hint,
+                  fontSize: 13,
+                ),
+              ),
               const SizedBox(width: 6),
-              Icon(expanded ? Icons.expand_less : Icons.expand_more,
-                  size: 18, color: AppColors.hint),
+              Icon(
+                expanded ? Icons.expand_less : Icons.expand_more,
+                size: 18,
+                color: AppColors.hint,
+              ),
             ],
           ),
         ),
@@ -435,9 +470,10 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 4)),
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Row(
@@ -445,19 +481,29 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: TextField(
               onChanged: (v) => setState(() => searchQuery = v.trim()),
-              style:
-                  GoogleFonts.poppins(color: AppColors.titleText, fontSize: 14),
+              style: GoogleFonts.poppins(
+                color: AppColors.titleText,
+                fontSize: 14,
+              ),
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
                 hintText: "Search for parking spot",
                 hintStyle: GoogleFonts.poppins(
-                    color: Colors.grey.shade400, fontSize: 13),
+                  color: Colors.grey.shade400,
+                  fontSize: 13,
+                ),
                 prefixIcon:
                     Icon(Icons.search, color: Colors.grey.shade500, size: 20),
                 border: InputBorder.none,
-                contentPadding:
-                    const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                  horizontal: 12,
+                ),
               ),
             ),
           ),
@@ -467,17 +513,21 @@ class _HomeScreenState extends State<HomeScreen> {
               margin: const EdgeInsets.symmetric(vertical: 10),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.gold.withOpacity(0.12),
+                color: AppColors.accent.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
                 children: [
                   Icon(Icons.filter_alt_outlined,
-                      size: 18, color: AppColors.gold),
+                      size: 18, color: AppColors.accent),
                   const SizedBox(width: 6),
-                  Text("Filters",
-                      style: GoogleFonts.poppins(
-                          fontSize: 13, color: AppColors.titleText)),
+                  Text(
+                    "Filters",
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: AppColors.accent,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -496,30 +546,31 @@ class _HomeScreenState extends State<HomeScreen> {
     final photoUrl = place['photo'];
 
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => BookingScreen(
+      onTap: () {
+        setState(() => _navIndex = 1);
+        pushSmooth(
+          context,
+          BookingScreen(
             location: place['name'],
             parkingId: place['id'].toString(),
             phoneNumber: widget.phoneNumber,
           ),
-        ),
-      ),
+        );
+      },
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.cardBg,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-                color: AppColors.shadow,
-                blurRadius: 12,
-                offset: const Offset(0, 8)),
+              color: AppColors.shadow,
+              blurRadius: 12,
+              offset: const Offset(0, 8),
+            )
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
           children: [
             ClipRRect(
               borderRadius: const BorderRadius.only(
@@ -530,7 +581,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   photoUrl,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
-                      color: Colors.grey[200], child: const Icon(Icons.image)),
+                    color: Colors.grey[200],
+                    child: const Icon(Icons.image),
+                  ),
                 ),
               ),
             ),
@@ -548,30 +601,39 @@ class _HomeScreenState extends State<HomeScreen> {
                           const Icon(Icons.directions_car,
                               size: 16, color: Colors.grey),
                           const SizedBox(width: 6),
-                          Text("$cars cars",
-                              style: GoogleFonts.poppins(
-                                  fontSize: 13, color: AppColors.subtleText)),
+                          Text(
+                            "$cars cars",
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: AppColors.subtleText,
+                            ),
+                          ),
                           const SizedBox(width: 12),
                           const Icon(Icons.pedal_bike,
                               size: 16, color: Colors.grey),
                           const SizedBox(width: 6),
-                          Text("$bikes bikes",
-                              style: GoogleFonts.poppins(
-                                  fontSize: 13, color: AppColors.subtleText)),
+                          Text(
+                            "$bikes bikes",
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: AppColors.subtleText,
+                            ),
+                          ),
                         ],
                       ),
-                      Text("₹30/hr",
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.titleText,
-                          )),
+                      Text(
+                        "₹30/hr",
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.titleText,
+                        ),
+                      ),
                     ],
                   ),
 
                   const SizedBox(height: 10),
 
-                  // Parking name
                   Text(
                     place['name'],
                     maxLines: 1,
@@ -585,7 +647,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 10),
 
-                  // ETA + Distance
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -594,9 +655,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           const Icon(Icons.access_time,
                               size: 16, color: Colors.grey),
                           const SizedBox(width: 6),
-                          Text(eta,
-                              style: GoogleFonts.poppins(
-                                  fontSize: 13, color: AppColors.subtleText)),
+                          Text(
+                            eta,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: AppColors.subtleText,
+                            ),
+                          ),
                         ],
                       ),
                       Row(
@@ -604,121 +669,22 @@ class _HomeScreenState extends State<HomeScreen> {
                           const Icon(Icons.location_on,
                               size: 16, color: Colors.grey),
                           const SizedBox(width: 6),
-                          Text(dist,
-                              style: GoogleFonts.poppins(
-                                  fontSize: 13, color: AppColors.subtleText)),
+                          Text(
+                            dist,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: AppColors.subtleText,
+                            ),
+                          ),
                         ],
                       ),
                     ],
                   ),
                 ],
               ),
-            )
+            ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildGlassyNavBar() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          height: 70,
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          decoration: BoxDecoration(
-            color: AppColors.glassBg,
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6)),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _navItem(Icons.home, "Home", () {}),
-              _navItem(Icons.map_outlined, "Map", () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        MyBookingsScreen(phoneNumber: widget.phoneNumber),
-                  ),
-                );
-              }),
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          MyBookingsScreen(phoneNumber: widget.phoneNumber),
-                    ),
-                  );
-                },
-                child: Container(
-                  height: 56,
-                  width: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.accent,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.accent.withOpacity(0.28),
-                        blurRadius: 12,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(Icons.local_parking_rounded,
-                      color: Colors.white, size: 28),
-                ),
-              ),
-              _navItem(Icons.list_alt, "Bookings", () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        MyBookingsScreen(phoneNumber: widget.phoneNumber),
-                  ),
-                );
-              }),
-              _navItem(Icons.account_circle, "Profile", () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        ProfileScreen(phoneNumber: widget.phoneNumber),
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _navItem(IconData icon, String label, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: Colors.white.withOpacity(0.9), size: 20),
-          const SizedBox(height: 4),
-          Text(label,
-              style: GoogleFonts.poppins(
-                fontSize: 10,
-                color: Colors.white.withOpacity(0.85),
-              )),
-        ],
       ),
     );
   }
