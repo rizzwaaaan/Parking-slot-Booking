@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:parking_booking/main.dart';
 import 'package:parking_booking/main_nav_screen.dart';
 
 import 'home_screen.dart';
@@ -203,20 +204,14 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
               currentIndex: 2, // Bookings tab active
               onItemSelected: (index) {
                 if (index == 0) {
-                  Navigator.push(
+                  pushSmooth(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          HomeScreen(phoneNumber: widget.phoneNumber),
-                    ),
+                    HomeScreen(phoneNumber: widget.phoneNumber),
                   );
                 } else if (index == 3) {
-                  Navigator.push(
+                  pushSmooth(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          ProfileScreen(phoneNumber: widget.phoneNumber),
-                    ),
+                    ProfileScreen(phoneNumber: widget.phoneNumber),
                   );
                 }
               },

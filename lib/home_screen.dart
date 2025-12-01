@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:parking_booking/main.dart';
 
 import 'booking_screen.dart';
 import 'my_bookings_screen.dart';
@@ -246,20 +247,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   } else if (index == 1) {
                     // Map Screen (future)
                   } else if (index == 2) {
-                    Navigator.push(
+                    pushSmooth(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            MyBookingsScreen(phoneNumber: widget.phoneNumber),
-                      ),
+                      MyBookingsScreen(phoneNumber: widget.phoneNumber),
                     );
                   } else if (index == 3) {
-                    Navigator.push(
+                    pushSmooth(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            ProfileScreen(phoneNumber: widget.phoneNumber),
-                      ),
+                      ProfileScreen(phoneNumber: widget.phoneNumber),
                     );
                   }
                 },
@@ -382,11 +377,9 @@ class _HomeScreenState extends State<HomeScreen> {
         GestureDetector(
           onTap: () {
             setState(() => _navIndex = 3);
-            Navigator.push(
+            pushSmooth(
               context,
-              MaterialPageRoute(
-                builder: (_) => ProfileScreen(phoneNumber: widget.phoneNumber),
-              ),
+              MyBookingsScreen(phoneNumber: widget.phoneNumber),
             );
           },
           child: Container(
@@ -551,14 +544,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () {
         setState(() => _navIndex = 1);
-        Navigator.push(
+        pushSmooth(
           context,
-          MaterialPageRoute(
-            builder: (_) => BookingScreen(
-              location: place['name'],
-              parkingId: place['id'].toString(),
-              phoneNumber: widget.phoneNumber,
-            ),
+          BookingScreen(
+            location: place['name'],
+            parkingId: place['id'].toString(),
+            phoneNumber: widget.phoneNumber,
           ),
         );
       },
