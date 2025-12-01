@@ -1,13 +1,15 @@
 import 'dart:convert';
-import 'dart:ui'; // Required for BackdropFilter
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-// Import your other screens if needed for navigation
+import 'package:parking_booking/main_nav_screen.dart';
+
 import 'home_screen.dart';
 import 'profile_screen.dart';
+import 'main_nav_screen.dart'; // ✅ NEW NAVBAR
 
 // --- THEME COLORS (Matched to HomeScreen) ---
 class AppColors {
@@ -69,9 +71,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
   }
 
   Future<void> _fetchMyBookings() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
+
     try {
       final uri = Uri.parse(
           '$apiScheme://$apiHost/api/users/bookings/${widget.phoneNumber}');
@@ -87,22 +88,15 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
         String errorMessage = 'Failed to load bookings';
         try {
           final body = jsonDecode(response.body);
-          if (body != null && body['message'] != null) {
-            errorMessage = body['message'];
-          }
-        } catch (e) {
-          // Ignore
-        }
+          if (body['message'] != null) errorMessage = body['message'];
+        } catch (_) {}
+
         _showErrorSnackBar(errorMessage);
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     } catch (e) {
       _showErrorSnackBar('Error fetching bookings: $e');
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
@@ -112,9 +106,11 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text("Cancel Booking?",
-            style: GoogleFonts.poppins(
-                fontWeight: FontWeight.bold, color: AppColors.titleText)),
+        title: Text(
+          "Cancel Booking?",
+          style: GoogleFonts.poppins(
+              fontWeight: FontWeight.bold, color: AppColors.titleText),
+        ),
         content: Text(
           "Do you really want to cancel this booking?",
           style: GoogleFonts.poppins(color: AppColors.subtleText),
@@ -127,9 +123,11 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text("Yes",
-                style: GoogleFonts.poppins(
-                    color: AppColors.errorRed, fontWeight: FontWeight.bold)),
+            child: Text(
+              "Yes",
+              style: GoogleFonts.poppins(
+                  color: AppColors.errorRed, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -184,47 +182,74 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
       ),
       body: Stack(
         children: [
-          // --- Main Content ---
           _isLoading
               ? const Center(
                   child: CircularProgressIndicator(color: AppColors.accent))
               : _bookings.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.event_note,
-                              size: 80, color: Colors.grey.shade300),
-                          const SizedBox(height: 10),
-                          Text(
-                            "No bookings found.",
-                            style: GoogleFonts.poppins(
-                                fontSize: 18, color: AppColors.subtleText),
-                          ),
-                        ],
-                      ),
-                    )
+                  ? _emptyState()
                   : ListView.builder(
-                      // Add padding at bottom so the last item isn't hidden by the Glassy Nav
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
                       itemCount: _bookings.length,
-                      itemBuilder: (context, index) {
-                        return _buildBookingCard(_bookings[index]);
-                      },
+                      itemBuilder: (context, index) =>
+                          _buildBookingCard(_bookings[index]),
                     ),
 
-          // --- Glassy Nav Bar ---
+          // ---- NEW MODULAR NAVBAR ----
           Positioned(
             left: 16,
             right: 16,
             bottom: 18,
-            child: _buildGlassyNavBar(),
+            child: MainNavBar(
+              currentIndex: 2, // Bookings tab active
+              onItemSelected: (index) {
+                if (index == 0) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          HomeScreen(phoneNumber: widget.phoneNumber),
+                    ),
+                  );
+                } else if (index == 3) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          ProfileScreen(phoneNumber: widget.phoneNumber),
+                    ),
+                  );
+                }
+              },
+
+              // Center button = REFRESH
+              centerIcon: Icons.refresh_rounded,
+              centerAction: () => _fetchMyBookings(),
+            ),
           ),
         ],
       ),
     );
   }
 
+  // Empty State Widget
+  Widget _emptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.event_note, size: 80, color: Colors.grey.shade300),
+          const SizedBox(height: 10),
+          Text(
+            "No bookings found.",
+            style:
+                GoogleFonts.poppins(fontSize: 18, color: AppColors.subtleText),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Build Booking Card
   Widget _buildBookingCard(dynamic booking) {
     final entryTime = DateTime.parse(booking['entry_time']);
     final bool isCancelled = booking['cancelled'] == true;
@@ -257,28 +282,25 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: Location Name + Status
+            // Header Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Flexible(
+                Expanded(
                   child: Text(
                     booking['location'] ?? 'Unknown Location',
                     style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.titleText,
-                    ),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.titleText),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 8),
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -289,24 +311,23 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                   child: Text(
                     statusText,
                     style: GoogleFonts.poppins(
-                      color: statusColor,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
+                        color: statusColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
             ),
+
             const SizedBox(height: 12),
             const Divider(height: 20, color: Color(0xFFEEEEEE)),
 
-            // Details
             _buildDetailRow(Icons.calendar_today, "Date",
                 DateFormat('MMM dd, yyyy').format(entryTime)),
             _buildDetailRow(Icons.access_time, "Entry",
                 DateFormat('hh:mm a').format(entryTime)),
 
-            if (isCancelled) ...[
+            if (isCancelled)
               _buildDetailRow(
                   Icons.cancel_outlined,
                   "Cancelled",
@@ -314,23 +335,16 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                       ? DateFormat('hh:mm a')
                           .format(DateTime.parse(booking['cancelled_at']))
                       : '-'),
-              _buildDetailRow(Icons.currency_rupee, "Refund",
-                  "${booking['refund_percent'] ?? 0}%"),
-            ] else if (isCompleted) ...[
+
+            if (isCompleted)
               _buildDetailRow(
-                  Icons.exit_to_app,
-                  "Exit",
-                  booking['exit_time'] != null
-                      ? DateFormat('hh:mm a')
-                          .format(DateTime.parse(booking['exit_time']))
-                      : '-'),
-              _buildDetailRow(
-                  Icons.currency_rupee,
-                  "Paid",
-                  booking['amount'] != null
-                      ? "₹${booking['amount'].toStringAsFixed(2)}"
-                      : '-'),
-            ],
+                Icons.exit_to_app,
+                "Exit",
+                booking['exit_time'] != null
+                    ? DateFormat('hh:mm a')
+                        .format(DateTime.parse(booking['exit_time']))
+                    : '-',
+              ),
 
             const SizedBox(height: 8),
             Container(
@@ -355,24 +369,25 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                       Text(
                         (booking['number_plate'] ?? 'N/A').toUpperCase(),
                         style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.titleText),
+                            color: AppColors.titleText,
+                            fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
                   Text(
                     "Slot ${booking['slot_number'] ?? 'N/A'}",
                     style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.bold, color: AppColors.accent),
+                        color: AppColors.accent,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
             ),
 
-            // Cancel Button
-            if (!isCompleted && !isCancelled)
+            if (!isCancelled && !isCompleted)
               Padding(
-                padding: const EdgeInsets.only(top: 16.0),
+                padding: const EdgeInsets.only(top: 16),
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -402,148 +417,26 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
 
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Icon(icon, size: 16, color: AppColors.subtleText),
           const SizedBox(width: 8),
           SizedBox(
             width: 80,
-            child: Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                color: AppColors.subtleText,
-              ),
-            ),
+            child: Text(label,
+                style: GoogleFonts.poppins(
+                    fontSize: 13, color: AppColors.subtleText)),
           ),
           Expanded(
             child: Text(
               value,
               style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.titleText,
-              ),
-              overflow: TextOverflow.ellipsis,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.titleText),
               textAlign: TextAlign.end,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ------------------ GLASSY NAV BAR ------------------
-  Widget _buildGlassyNavBar() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          height: 70,
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          decoration: BoxDecoration(
-            color: AppColors.glassBg,
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Colors.white.withOpacity(0.5)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              // Home Button
-              _navItem(Icons.home_outlined, "Home", () {
-                // Navigate back to HomeScreen
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => HomeScreen(phoneNumber: widget.phoneNumber),
-                  ),
-                );
-              }, isActive: false),
-
-              // Map Button (Assuming Map is same as Bookings for now based on your code)
-              _navItem(Icons.map_outlined, "Map", () {
-                // Logic for map navigation
-              }, isActive: false),
-
-              // CENTER BUTTON (Floating style)
-              GestureDetector(
-                onTap: () {
-                  // Since we are already on bookings, maybe refresh?
-                  _fetchMyBookings();
-                },
-                child: Container(
-                  height: 56,
-                  width: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.accent,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.accent.withOpacity(0.28),
-                        blurRadius: 12,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons
-                        .refresh, // Changed icon to refresh since we are on bookings list
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-              ),
-
-              // Bookings Button (Active State)
-              _navItem(Icons.list_alt, "Bookings", () {}, isActive: true),
-
-              // Profile Button
-              _navItem(Icons.person_outline, "Profile", () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        ProfileScreen(phoneNumber: widget.phoneNumber),
-                  ),
-                );
-              }, isActive: false),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _navItem(IconData icon, String label, VoidCallback onTap,
-      {bool isActive = false}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon,
-              color: isActive
-                  ? AppColors.accent
-                  : Colors.grey.shade600, // Adjusted for Light theme
-              size: 24),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-              color: isActive
-                  ? AppColors.accent
-                  : Colors.grey.shade600, // Adjusted for Light theme
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
