@@ -17,12 +17,12 @@ class AppColors {
   static const Color cardBg = Color(0xFFFFFFFF);
   static const Color subtleText = Color(0xFF9AA0A6);
   static const Color titleText = Color(0xFF222222);
-  static const Color accent = Color(0xFF7B61FF);
+  static const Color accent = Color(0xFF67009B);
   static const Color glassBg = Color.fromRGBO(255, 255, 255, 0.15);
   static const Color shadow = Color.fromRGBO(33, 33, 33, 0.08);
   static const Color errorRed = Color(0xFFD32F2F);
   static const Color successGreen = Color(0xFF4CAF50);
-  static const Color cancelledGrey = Color(0xFF9E9E9E);
+  static const Color cancelledGrey = Color(0xFFD32F2F);
 }
 // --- END THEME COLORS ---
 
