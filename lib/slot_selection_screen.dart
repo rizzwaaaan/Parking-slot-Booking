@@ -15,11 +15,12 @@ import 'booking_screen.dart' hide AppColors;
 class AppColors {
   static const background = Color(0xFFF7F7F9);
   static const cardBg = Color(0xFFFFFFFF);
-  static const accent = Color(0xFF7B61FF);
+  static const Color accent = Color(0xFF67009B);
   static const gold = Color(0xFFFCC417);
   static const subtleText = Color(0xFF9AA0A6);
   static const titleText = Color(0xFF222222);
-  static const slotSelected = Color(0xFFDCE8FF);
+  static const slotSelected = Color(0xFFF1D6FF);
+
   static const grid = Color(0xFFE2E2E2);
 }
 
@@ -356,7 +357,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
                 "$lane-$num",
                 style: GoogleFonts.poppins(
                   fontSize: 10,
-                  color: AppColors.subtleText,
+                  color: AppColors.accent,
                 ),
               ),
             ),
@@ -402,7 +403,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
                             ),
                             child: Icon(
                               Icons.arrow_back,
-                              color: AppColors.titleText,
+                              color: AppColors.accent,
                             ),
                           ),
                         ),
@@ -447,8 +448,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
                               Row(
                                 children: [
                                   Expanded(
-                                      child:
-                                          Divider(color: AppColors.subtleText)),
+                                      child: Divider(color: AppColors.accent)),
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 12),
@@ -458,8 +458,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
                                             color: AppColors.subtleText)),
                                   ),
                                   Expanded(
-                                      child:
-                                          Divider(color: AppColors.subtleText)),
+                                      child: Divider(color: AppColors.accent)),
                                 ],
                               ),
                               const SizedBox(height: 40),
@@ -478,7 +477,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
                     padding: const EdgeInsets.all(24),
                     child: SlideActionBtn(
                       label: "Slide to Book",
-                      baseColor: Colors.black, // Dark iOS style
+                      baseColor: AppColors.accent, // Dark iOS style
                       knobColor: Colors.white,
                       successColor: AppColors.accent, // Uses your theme accent
                       onSubmit: () {

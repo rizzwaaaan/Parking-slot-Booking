@@ -276,7 +276,8 @@ class _BookingScreenState extends State<BookingScreen> {
                     ),
                     child: IconButton(
                       splashRadius: 22,
-                      icon: const Icon(Icons.arrow_back, color: Colors.black),
+                      icon:
+                          const Icon(Icons.arrow_back, color: AppColors.accent),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ),
