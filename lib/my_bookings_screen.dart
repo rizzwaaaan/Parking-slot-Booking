@@ -5,12 +5,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:parking_booking/main.dart';
-import 'package:parking_booking/main_nav_screen.dart';
 
 import 'home_screen.dart';
 import 'profile_screen.dart';
-import 'main_nav_screen.dart'; // ✅ NEW NAVBAR
+import 'main_nav_screen.dart';
+import 'package:parking_booking/main.dart'; // for pushSmooth()
 
 // --- THEME COLORS (Matched to HomeScreen) ---
 class AppColors {
@@ -42,6 +41,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
   String apiHost = 'backend-parking-bk8y.onrender.com';
   String apiScheme = 'https';
 
+  int _currentTab = 0; // 0 = Active, 1 = Completed, 2 = Cancelled
+
   @override
   void initState() {
     super.initState();
@@ -61,10 +62,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            message,
-            style: GoogleFonts.poppins(color: Colors.white),
-          ),
+          content:
+              Text(message, style: GoogleFonts.poppins(color: Colors.white)),
           backgroundColor: AppColors.errorRed,
         ),
       );
@@ -86,13 +85,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
           _isLoading = false;
         });
       } else {
-        String errorMessage = 'Failed to load bookings';
-        try {
-          final body = jsonDecode(response.body);
-          if (body['message'] != null) errorMessage = body['message'];
-        } catch (_) {}
-
-        _showErrorSnackBar(errorMessage);
+        _showErrorSnackBar('Failed to load bookings');
         setState(() => _isLoading = false);
       }
     } catch (e) {
@@ -118,17 +111,15 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
             child: Text("No",
                 style: GoogleFonts.poppins(color: AppColors.subtleText)),
+            onPressed: () => Navigator.pop(ctx, false),
           ),
           TextButton(
+            child: Text("Yes",
+                style: GoogleFonts.poppins(
+                    color: AppColors.errorRed, fontWeight: FontWeight.bold)),
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              "Yes",
-              style: GoogleFonts.poppins(
-                  color: AppColors.errorRed, fontWeight: FontWeight.bold),
-            ),
           ),
         ],
       ),
@@ -150,9 +141,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        _showErrorSnackBar(
-            "Cancelled • Refund: ${data["refund_percent"]}% (₹${data["refund_amount"]})");
+        _showErrorSnackBar("Booking Cancelled");
         _fetchMyBookings();
       } else {
         _showErrorSnackBar("Failed to cancel booking");
@@ -162,8 +151,129 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     }
   }
 
+// NEW iOS Sliding Segmented Control
+  Widget _buildTopTabs() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(30),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.4),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Stack(
+              children: [
+                // 🔵 Sliding Purple Background
+                AnimatedAlign(
+                  alignment: _currentTab == 0
+                      ? Alignment.centerLeft
+                      : _currentTab == 1
+                          ? Alignment.center
+                          : Alignment.centerRight,
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOutCubic,
+                  child: Container(
+                    width: (MediaQuery.of(context).size.width - 32) / 3,
+                    height: 44,
+                    margin: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.accent.withOpacity(0.35),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+
+                // TAB LABELS
+                Row(
+                  children: [
+                    _tabLabel("Active", 0),
+                    _tabLabel("Completed", 1),
+                    _tabLabel("Cancelled", 2),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tabLabel(String text, int index) {
+    final active = _currentTab == index;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _currentTab = index),
+        child: Center(
+          child: AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: active ? Colors.white : AppColors.titleText,
+            ),
+            child: Text(text),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tabButton(String text, int index) {
+    final active = _currentTab == index;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _currentTab = index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 240),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: active ? AppColors.accent : Colors.transparent,
+            borderRadius: BorderRadius.circular(26),
+          ),
+          child: Center(
+            child: Text(
+              text,
+              style: GoogleFonts.poppins(
+                color: active ? Colors.white : AppColors.titleText,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // FILTER BOOKINGS
+    final filtered = _bookings.where((b) {
+      final isCancelled = b['cancelled'] == true;
+      final isCompleted = !isCancelled &&
+          (b['exit_time'] != null || (b['status'] ?? 'active') == 'completed');
+
+      if (_currentTab == 0) return !isCancelled && !isCompleted; // Active
+      if (_currentTab == 1) return isCompleted; // Completed
+      if (_currentTab == 2) return isCancelled; // Cancelled
+
+      return true;
+    }).toList();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -183,25 +293,33 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
       ),
       body: Stack(
         children: [
-          _isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.accent))
-              : _bookings.isEmpty
-                  ? _emptyState()
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-                      itemCount: _bookings.length,
-                      itemBuilder: (context, index) =>
-                          _buildBookingCard(_bookings[index]),
-                    ),
+          Column(
+            children: [
+              _buildTopTabs(),
+              Expanded(
+                child: _isLoading
+                    ? const Center(
+                        child:
+                            CircularProgressIndicator(color: AppColors.accent))
+                    : filtered.isEmpty
+                        ? _emptyState()
+                        : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+                            itemCount: filtered.length,
+                            itemBuilder: (context, index) =>
+                                _buildBookingCard(filtered[index]),
+                          ),
+              ),
+            ],
+          ),
 
-          // ---- NEW MODULAR NAVBAR ----
+          // ---- NAVBAR ----
           Positioned(
             left: 16,
             right: 16,
             bottom: 18,
             child: MainNavBar(
-              currentIndex: 2, // Bookings tab active
+              currentIndex: 2,
               onItemSelected: (index) {
                 if (index == 0) {
                   pushSmooth(
@@ -215,8 +333,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                   );
                 }
               },
-
-              // Center button = REFRESH
               centerIcon: Icons.refresh_rounded,
               centerAction: () => _fetchMyBookings(),
             ),
@@ -226,7 +342,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     );
   }
 
-  // Empty State Widget
+  // -------- Empty State --------
   Widget _emptyState() {
     return Center(
       child: Column(
@@ -244,7 +360,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     );
   }
 
-  // Build Booking Card
+  // -------- Booking Card --------
   Widget _buildBookingCard(dynamic booking) {
     final entryTime = DateTime.parse(booking['entry_time']);
     final bool isCancelled = booking['cancelled'] == true;
@@ -281,7 +397,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Row
+            // HEADER
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -324,12 +440,13 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
 
             if (isCancelled)
               _buildDetailRow(
-                  Icons.cancel_outlined,
-                  "Cancelled",
-                  booking['cancelled_at'] != null
-                      ? DateFormat('hh:mm a')
-                          .format(DateTime.parse(booking['cancelled_at']))
-                      : '-'),
+                Icons.cancel_outlined,
+                "Cancelled",
+                booking['cancelled_at'] != null
+                    ? DateFormat('hh:mm a')
+                        .format(DateTime.parse(booking['cancelled_at']))
+                    : '-',
+              ),
 
             if (isCompleted)
               _buildDetailRow(
@@ -342,6 +459,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
               ),
 
             const SizedBox(height: 8),
+
+            // VEHICLE INFO BOX
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
