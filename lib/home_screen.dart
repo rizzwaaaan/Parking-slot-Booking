@@ -18,7 +18,7 @@ class AppColors {
   static const Color cardBg = Color(0xFFFFFFFF);
   static const Color subtleText = Color(0xFF9AA0A6);
   static const Color titleText = Color(0xFF222222);
-  static const Color accent = Color(0xFF7B61FF);
+  static const Color accent = Color(0xFF67009B);
   static const Color gold = Color(0xFFFCC417);
   static const Color glassBg = Color.fromRGBO(255, 255, 255, 0.15);
   static const Color shadow = Color.fromRGBO(33, 33, 33, 0.08);
@@ -395,7 +395,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 )
               ],
             ),
-            child: const Icon(Icons.person, color: AppColors.titleText),
+            child: const Icon(Icons.person, color: AppColors.accent),
           ),
         ),
       ],
@@ -408,7 +408,7 @@ class _HomeScreenState extends State<HomeScreen> {
       style: GoogleFonts.poppins(
         fontSize: 23,
         fontWeight: FontWeight.w600,
-        color: AppColors.titleText,
+        color: AppColors.accent,
         height: 1.05,
       ),
     );
@@ -423,7 +423,7 @@ class _HomeScreenState extends State<HomeScreen> {
           style: GoogleFonts.poppins(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: AppColors.titleText,
+            color: AppColors.accent,
           ),
         ),
         InkWell(
@@ -496,6 +496,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 prefixIcon:
                     Icon(Icons.search, color: Colors.grey.shade500, size: 20),
                 border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
                   vertical: 14,
                   horizontal: 12,
@@ -509,19 +513,19 @@ class _HomeScreenState extends State<HomeScreen> {
               margin: const EdgeInsets.symmetric(vertical: 10),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.gold.withOpacity(0.12),
+                color: AppColors.accent.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
                 children: [
                   Icon(Icons.filter_alt_outlined,
-                      size: 18, color: AppColors.gold),
+                      size: 18, color: AppColors.accent),
                   const SizedBox(width: 6),
                   Text(
                     "Filters",
                     style: GoogleFonts.poppins(
                       fontSize: 13,
-                      color: AppColors.titleText,
+                      color: AppColors.accent,
                     ),
                   ),
                 ],
