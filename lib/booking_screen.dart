@@ -61,7 +61,7 @@ class _BookingScreenState extends State<BookingScreen> {
   // Colours & theme (exact hex values from your spec)
   static const Color backgroundColor = Color(0xFFF7F7F9);
   static const Color cardBg = Color(0xFFFFFFFF);
-  static const Color accent = Color(0xFF7B61FF);
+  static const Color accent = Color(0xFF67009B);
   static const Color gold = Color(0xFFFCC417);
   static const Color subtleText = Color(0xFF9AA0A6);
   static const Color titleText = Color(0xFF222222);
@@ -411,7 +411,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
           Text(widget.location,
               style: GoogleFonts.poppins(
-                  fontSize: 18, fontWeight: FontWeight.w700, color: titleText)),
+                  fontSize: 18, fontWeight: FontWeight.w700, color: accent)),
           const SizedBox(height: 6),
 
           Row(
