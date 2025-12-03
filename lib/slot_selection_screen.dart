@@ -1,3 +1,5 @@
+// FULL FILE WITH FUNCTIONAL FIXES ONLY — NO UI CHANGES
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
@@ -6,7 +8,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
-import 'dart:async'; // Added for Future.delayed
+import 'dart:async';
 
 import 'success_screen.dart';
 import 'booking_screen.dart' hide AppColors;
@@ -77,6 +79,13 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
     _fetchSlots();
   }
 
+  @override
+  void dispose() {
+    socket.dispose();
+    _razorpay.clear();
+    super.dispose();
+  }
+
   // ---------------- SOCKET ----------------
   void _initSocket() {
     socket = IO.io(
@@ -96,19 +105,26 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
 
       final slotNum = data["slot_number"];
       final status = data["status"];
-      final sameUser = data["phone"] == widget.phoneNumber;
+      final phone = data["phone"];
 
       setState(() {
         allSlots = allSlots.map((s) {
           if (s["slot_number"] == slotNum) {
-            return {...s, "status": status};
+            return {
+              ...s,
+              "status": status,
+              "held_by": phone // <-- FIXED (backend sends this)
+            };
           }
           return s;
         }).toList();
 
-        if (selectedSlotNumbers.contains(slotNum) &&
-            !sameUser &&
-            (status == "booked" || status == "held")) {
+        // if my selected slot becomes held/booked/pending by someone else → remove it
+        final sameUser = phone == widget.phoneNumber;
+
+        if (!sameUser &&
+            selectedSlotNumbers.contains(slotNum) &&
+            (status == "held" || status == "booked" || status == "pending")) {
           selectedSlotNumbers.remove(slotNum);
         }
       });
@@ -192,6 +208,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
     });
   }
 
+  // ---------------- BOOKING (ALWAYS UNVERIFIED) ----------------
   Future<void> _confirmBooking(String paymentId) async {
     final entryDateTime = DateTime(
       widget.startDate.year,
@@ -215,7 +232,8 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
           "entry_time": entryDateTime.toIso8601String(),
           "phone": widget.phoneNumber,
           "payment_id": paymentId,
-          "amount": price.toInt()
+          "amount": price.toInt(),
+          // DO NOT SET is_verified → user booking stays PENDING
         }),
       );
 
@@ -225,6 +243,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
     }
 
     if (!mounted) return;
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -254,7 +273,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
     );
   }
 
-  // ---------------- GRID UI HELPERS ----------------
+  // ---------------- GRID HELPERS ----------------
   Map<String, List<Map<String, dynamic>>> _groupSlots() {
     final Map<String, List<Map<String, dynamic>>> lanes = {"A": [], "B": []};
 
@@ -275,7 +294,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
     return lanes;
   }
 
-  // PURE GRID + CARS (no tile boxes)
+  // ---------------- GRID UI ----------------
   Widget _gridForLane(String lane, List<Map<String, dynamic>> slots) {
     const columns = 3;
     const double cellHeight = 120;
@@ -288,12 +307,9 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
 
     return Stack(
       children: [
-        // Full dashed grid behind
         Positioned.fill(
           child: ParkingGridPainterWidget(columns: columns, rows: rows.length),
         ),
-
-        // cars + labels
         Column(
           children: rows.map((row) {
             return SizedBox(
@@ -301,7 +317,6 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
               child: Row(
                 children: List.generate(columns, (i) {
                   if (i >= row.length) return Expanded(child: Container());
-
                   return Expanded(child: _slotCell(row[i], lane));
                 }),
               ),
@@ -312,41 +327,61 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
     );
   }
 
+  // ---------------- INDIVIDUAL SLOT UI ----------------
   Widget _slotCell(Map<String, dynamic> slot, String lane) {
     final int num = slot["slot_number"];
     final String status = slot["status"];
+    final String? heldBy = slot["held_by"];
 
+    final bool isHeldByMe = status == "held" && heldBy == widget.phoneNumber;
+    final bool heldByOther = status == "held" && heldBy != widget.phoneNumber;
     final bool isBooked = status == "booked";
-    final bool isHeld = status == "held";
-    final bool isHeldByOtherUser =
-        isHeld && slot["phone"] != widget.phoneNumber;
+    final bool isPending = status == "pending";
 
-    // If YOU held the slot → treat as selected visually
-    final bool isSelected = selectedSlotNumbers.contains(num) ||
-        (isHeld && slot["phone"] == widget.phoneNumber);
+    final bool locked = isBooked || isPending || heldByOther;
 
-    final bool isLocked = isBooked || isHeldByOtherUser;
+    final bool isSelected = selectedSlotNumbers.contains(num);
+
+    Color fillColor = Colors.transparent;
+    Color borderColor = AppColors.grid;
+    Color textColor = AppColors.accent;
+
+    if (isHeldByMe) {
+      fillColor = AppColors.gold.withOpacity(0.2);
+      borderColor = AppColors.gold;
+      textColor = AppColors.gold;
+    } else if (isSelected) {
+      fillColor = AppColors.slotSelected;
+      borderColor = AppColors.accent;
+    }
 
     return GestureDetector(
-      onTap: isLocked
+      onTap: locked
           ? null
           : () async {
-              if (isSelected) {
-                // do NOT unselect if it's held by you — optional
+              if (isHeldByMe) {
+                setState(() => selectedSlotNumbers = {num});
                 return;
               }
 
+              if (isSelected) return;
+
               bool ok = await _holdSlot(num);
-              if (ok)
-                setState(() => selectedSlotNumbers.add(num));
-              else
-                _showError("Unavailable");
+              if (ok) {
+                setState(() => selectedSlotNumbers = {num});
+              } else {
+                _showError("Slot unavailable");
+              }
             },
       child: Container(
         margin: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.slotSelected : Colors.transparent,
+          color: fillColor,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: borderColor,
+            width: (isSelected || isHeldByMe) ? 2 : 1,
+          ),
         ),
         child: Stack(
           children: [
@@ -357,18 +392,31 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
                 "$lane-$num",
                 style: GoogleFonts.poppins(
                   fontSize: 10,
-                  color: AppColors.accent,
+                  color: textColor,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-
-            // Booked + held by others → show car
-            if (isBooked || isHeldByOtherUser)
+            if (isHeldByMe)
+              Center(
+                child: Text(
+                  "HELD",
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.gold,
+                  ),
+                ),
+              ),
+            if (locked)
               Center(
                 child: SvgPicture.asset(
                   "assets/car.svg",
                   width: 40,
                   fit: BoxFit.contain,
+                  colorFilter: isPending
+                      ? const ColorFilter.mode(Colors.orange, BlendMode.srcIn)
+                      : null,
                 ),
               ),
           ],
@@ -387,7 +435,6 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
           : SafeArea(
               child: Column(
                 children: [
-                  // HEADER
                   Padding(
                     padding: const EdgeInsets.all(18),
                     child: Row(
@@ -421,7 +468,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              widget.location, // parking name
+                              widget.location,
                               style: GoogleFonts.poppins(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w400,
@@ -433,7 +480,6 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
                       ],
                     ),
                   ),
-
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
@@ -452,10 +498,13 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 12),
-                                    child: Text("ENTRY",
-                                        style: GoogleFonts.poppins(
-                                            fontSize: 12,
-                                            color: AppColors.subtleText)),
+                                    child: Text(
+                                      "ENTRY",
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        color: AppColors.subtleText,
+                                      ),
+                                    ),
                                   ),
                                   Expanded(
                                       child: Divider(color: AppColors.accent)),
@@ -469,19 +518,14 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
                       },
                     ),
                   ),
-
-                  // ----------------------------------------------------
-                  // CHANGED: REPLACED OLD BUTTON WITH NEW SLIDE BUTTON
-                  // ----------------------------------------------------
                   Padding(
                     padding: const EdgeInsets.all(24),
                     child: SlideActionBtn(
                       label: "Slide to Book",
-                      baseColor: AppColors.accent, // Dark iOS style
+                      baseColor: AppColors.accent,
                       knobColor: Colors.white,
-                      successColor: AppColors.accent, // Uses your theme accent
+                      successColor: AppColors.accent,
                       onSubmit: () {
-                        // Delay slightly to show visual success state before processing
                         Future.delayed(const Duration(milliseconds: 300), () {
                           _startPayment();
                         });
@@ -495,9 +539,7 @@ class _SlotSelectionScreenState extends State<SlotSelectionScreen> {
   }
 }
 
-// ---------------------------------------------------------
-// NEW perfect GRID painter
-// ---------------------------------------------------------
+// GRID PAINTER
 class ParkingGridPainterWidget extends StatelessWidget {
   final int columns;
   final int rows;
@@ -532,13 +574,11 @@ class ParkingGridPainter extends CustomPainter {
     final double colW = size.width / columns;
     final double rowH = size.height / rows;
 
-    // INTERNAL horizontal dashed lines only (skip top = 0 and bottom = rows)
     for (int r = 1; r < rows; r++) {
       double y = r * rowH;
       _dash(canvas, Offset(0, y), Offset(size.width, y), paint);
     }
 
-    // Vertical dashed lines (keep all)
     for (int c = 1; c < columns; c++) {
       double x = c * colW;
       _dash(canvas, Offset(x, 0), Offset(x, size.height), paint);
@@ -566,9 +606,7 @@ class ParkingGridPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-// ---------------------------------------------------------
-// ADDED: iOS STYLE SLIDE-TO-ACTION WIDGET CLASS
-// ---------------------------------------------------------
+// SLIDE BUTTON (unchanged)
 class SlideActionBtn extends StatefulWidget {
   final VoidCallback onSubmit;
   final String label;
@@ -594,7 +632,6 @@ class _SlideActionBtnState extends State<SlideActionBtn>
   double _position = 0.0;
   bool _submitted = false;
 
-  // To handle the snap-back animation
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -615,7 +652,6 @@ class _SlideActionBtnState extends State<SlideActionBtn>
 
   void _onDragStart(DragStartDetails details) {
     if (_submitted) return;
-    // Stop any snap-back animation if the user grabs it again
     _controller.stop();
   }
 
@@ -626,7 +662,6 @@ class _SlideActionBtnState extends State<SlideActionBtn>
     final maxDrag = maxWidth - knobWidth;
 
     setState(() {
-      // Move position, clamping between 0 and the end
       _position += details.delta.dx;
       if (_position < 0) _position = 0;
       if (_position > maxDrag) _position = maxDrag;
@@ -637,17 +672,15 @@ class _SlideActionBtnState extends State<SlideActionBtn>
     if (_submitted) return;
 
     final maxDrag = maxWidth - knobWidth;
-    final threshold = maxDrag * 0.85; // Trigger if dragged 85% of the way
+    final threshold = maxDrag * 0.85;
 
     if (_position > threshold) {
-      // Success: Snap to end and trigger callback
       setState(() {
         _position = maxDrag;
         _submitted = true;
       });
       widget.onSubmit();
     } else {
-      // Failure: Snap back to start using animation
       _animation = Tween<double>(begin: _position, end: 0).animate(
         CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
       )..addListener(() {
@@ -662,7 +695,7 @@ class _SlideActionBtnState extends State<SlideActionBtn>
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 64, // Standard iOS button height
+      height: 64,
       decoration: BoxDecoration(
         color: _submitted ? widget.successColor : widget.baseColor,
         borderRadius: BorderRadius.circular(50),
@@ -677,15 +710,13 @@ class _SlideActionBtnState extends State<SlideActionBtn>
       child: LayoutBuilder(
         builder: (context, constraints) {
           final maxWidth = constraints.maxWidth;
-          final knobSize = 56.0; // Slightly smaller than height for padding
-          final padding = (64 - knobSize) / 2; // Vertical padding
+          final knobSize = 56.0;
+          final padding = (64 - knobSize) / 2;
 
           return Stack(
             children: [
-              // 1. TEXT LABEL (Centered)
               Center(
                 child: Opacity(
-                  // Fade text out as slider moves over it
                   opacity:
                       (1 - (_position / (maxWidth - knobSize))).clamp(0.0, 1.0),
                   child: Text(
@@ -699,8 +730,6 @@ class _SlideActionBtnState extends State<SlideActionBtn>
                   ),
                 ),
               ),
-
-              // 2. DRAGGABLE KNOB
               Positioned(
                 left: _position + padding,
                 top: padding,

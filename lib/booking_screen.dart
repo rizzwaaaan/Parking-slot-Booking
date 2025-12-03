@@ -28,22 +28,18 @@ class BookingScreen extends StatefulWidget {
 }
 
 class _BookingScreenState extends State<BookingScreen> {
-  // Controller (initialized immediately so it's always available)
   final DraggableScrollableController _draggableController =
       DraggableScrollableController();
 
-  // API host settings
   String apiHost = 'backend-parking-bk8y.onrender.com';
   String apiScheme = 'https';
 
-  // UI & form state
   String? selectedVehicle = "Car";
   final vehicleTypes = ["Car", "Bike"];
   final TextEditingController vehicleNumberController = TextEditingController();
   DateTime selectedDate = DateTime.now();
   TimeOfDay selectedTime = TimeOfDay.now();
 
-  // Parking details (fetched)
   bool isLoading = true;
   double? lat;
   double? lng;
@@ -52,38 +48,30 @@ class _BookingScreenState extends State<BookingScreen> {
   int availableCarSlots = 0;
   int availableBikeSlots = 0;
 
-  // Sizes for image behaviour
-  final double _imageStartFraction = 0.40; // 40% (when sheet at min)
-  final double _sheetInitial = 0.60; // initial sheet size (60%)
+  final double _imageStartFraction = 0.40;
+  final double _sheetInitial = 0.60;
   final double _sheetMin = 0.60;
   final double _sheetMax = 1.0;
 
-  // Colours & theme (exact hex values from your spec)
   static const Color backgroundColor = Color(0xFFF7F7F9);
   static const Color cardBg = Color(0xFFFFFFFF);
   static const Color accent = Color(0xFF67009B);
   static const Color gold = Color(0xFFFCC417);
   static const Color subtleText = Color(0xFF9AA0A6);
   static const Color titleText = Color(0xFF222222);
-  // Added a light color for the dropdown text on change
-  static const Color lightThemeDropdownText =
-      titleText; // Using titleText for dark text on light background
+  static const Color lightThemeDropdownText = titleText;
 
   @override
   void initState() {
     super.initState();
 
-    // Local dev fallback
     if (kIsWeb &&
         (Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1')) {
       apiHost = '127.0.0.1:3000';
       apiScheme = 'http';
     }
 
-    // Listen to changes so UI rebuilds when sheet moves
     _draggableController.addListener(_onSheetChanged);
-
-    // Kick off data fetch
     _fetchParkingDetails();
   }
 
@@ -124,9 +112,7 @@ class _BookingScreenState extends State<BookingScreen> {
         setState(() => isLoading = false);
       }
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
     }
   }
 
@@ -141,13 +127,11 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Future<void> _pickTime() async {
-    // 💡 TIME PICKER CHANGE: Wrap the showTimePicker with Theme to enforce light mode
     final picked = await showTimePicker(
       context: context,
       initialTime: selectedTime,
       builder: (BuildContext context, Widget? child) {
         return Theme(
-          // Forcing a light theme for the Time Picker dialog
           data: ThemeData(
             brightness: Brightness.light,
             primaryColor: accent,
@@ -175,7 +159,10 @@ class _BookingScreenState extends State<BookingScreen> {
           location: widget.location,
           parkingId: widget.parkingId,
           phoneNumber: widget.phoneNumber,
-          selectedVehicle: selectedVehicle ?? "Car",
+
+          // backend requires lowercase
+          selectedVehicle: (selectedVehicle ?? "Car").toLowerCase(),
+
           vehicleNumber: vehicleNumberController.text.trim(),
           startDate: selectedDate,
           startTime: selectedTime,
@@ -184,7 +171,6 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  // Compute animation progress t in [0,1] where 0 = sheet at min, 1 = sheet at max
   double get _sheetProgress {
     try {
       if (!_draggableController.isAttached) {
@@ -222,7 +208,6 @@ class _BookingScreenState extends State<BookingScreen> {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            // Background Image
             ClipRRect(
               borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(26),
@@ -235,31 +220,15 @@ class _BookingScreenState extends State<BookingScreen> {
                   fit: BoxFit.cover,
                   width: double.infinity,
                   height: imageHeight,
-                  loadingBuilder: (c, child, progress) {
-                    if (progress == null) return child;
-                    return Container(
-                      color: Colors.grey[300],
-                      child: const Center(child: CircularProgressIndicator()),
-                    );
-                  },
-                  errorBuilder: (_, __, ___) {
-                    return Container(
-                        color: Colors.grey[300],
-                        child:
-                            const Center(child: Icon(Icons.image, size: 48)));
-                  },
                 ),
               ),
             ),
-
-            // Top Row: Back Button + Parking Name
             Positioned(
               top: 16,
               left: 14,
               right: 14,
               child: Row(
                 children: [
-                  // Back Button
                   Container(
                     height: 44,
                     width: 44,
@@ -276,15 +245,11 @@ class _BookingScreenState extends State<BookingScreen> {
                     ),
                     child: IconButton(
                       splashRadius: 22,
-                      icon:
-                          const Icon(Icons.arrow_back, color: AppColors.accent),
+                      icon: const Icon(Icons.arrow_back, color: accent),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ),
-
                   const SizedBox(width: 12),
-
-                  // Parking Name
                   Expanded(
                     child: Text(
                       widget.location,
@@ -314,7 +279,6 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Widget _buildBottomActionBar() {
-    // bottom fixed CTA used in the sheet
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
@@ -324,7 +288,6 @@ class _BookingScreenState extends State<BookingScreen> {
           topRight: Radius.circular(20),
         ),
         boxShadow: [
-          // Softer shadow that blends with the background
           BoxShadow(
             color: Colors.black.withOpacity(0.06),
             blurRadius: 18,
@@ -374,13 +337,11 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Widget _buildBottomSheetContent(BoxConstraints constraints) {
-    // NOTE: exact padding required by you is applied to this main Column's SingleChildScrollView
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // drag indicator
           Center(
             child: Container(
               width: 60,
@@ -391,30 +352,24 @@ class _BookingScreenState extends State<BookingScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 20), // header & title gap = 20px (rule 7)
-
-          // Header / Title area (title size within 23-26 range? you requested 23-26)
+          const SizedBox(height: 20),
           Text("Book Your Parking",
               style: GoogleFonts.poppins(
-                fontSize: 24, // between 23-26
+                fontSize: 24,
                 fontWeight: FontWeight.w600,
                 color: titleText,
               )),
-          const SizedBox(height: 16), // title & search bar gap = 16px (rule 7)
-
+          const SizedBox(height: 16),
           Text("Car Parking",
               style: GoogleFonts.poppins(
                   fontSize: 14,
                   color: subtleText,
                   fontWeight: FontWeight.w400)),
-
           const SizedBox(height: 8),
-
           Text(widget.location,
               style: GoogleFonts.poppins(
                   fontSize: 18, fontWeight: FontWeight.w700, color: accent)),
           const SizedBox(height: 6),
-
           Row(
             children: [
               Icon(Icons.location_on_outlined, size: 16, color: subtleText),
@@ -430,10 +385,7 @@ class _BookingScreenState extends State<BookingScreen> {
               ),
             ],
           ),
-
-          const SizedBox(height: 18), // section gap ~18-22
-
-          // Vehicle type + number row - card-like appearance (rounded card)
+          const SizedBox(height: 18),
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -464,17 +416,14 @@ class _BookingScreenState extends State<BookingScreen> {
                           color: Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        // 💡 VEHICLE TYPE CHANGE 1: Use a Theme widget to control the appearance of the native dropdown
                         child: Theme(
                           data: Theme.of(context).copyWith(
-                            // Enforce light theme colors for the dropdown menu
                             canvasColor: cardBg,
                             colorScheme: ColorScheme.light(primary: accent),
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<String>(
                               value: selectedVehicle,
-                              // 💡 VEHICLE TYPE CHANGE 2: Apply the light theme text color to the selected item and menu items
                               selectedItemBuilder: (BuildContext context) {
                                 return vehicleTypes.map((String value) {
                                   return Align(
@@ -482,8 +431,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                     child: Text(
                                       value,
                                       style: GoogleFonts.poppins(
-                                          color:
-                                              lightThemeDropdownText, // Apply dark text color
+                                          color: lightThemeDropdownText,
                                           fontSize: 14,
                                           fontWeight: FontWeight.w500),
                                     ),
@@ -495,8 +443,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                       value: v,
                                       child: Text(v,
                                           style: GoogleFonts.poppins(
-                                              color:
-                                                  titleText)))) // Menu item text is dark
+                                              color: titleText))))
                                   .toList(),
                               onChanged: (v) =>
                                   setState(() => selectedVehicle = v),
@@ -539,23 +486,17 @@ class _BookingScreenState extends State<BookingScreen> {
               ],
             ),
           ),
-
           const SizedBox(height: 22),
-
-          // Book a slot label
           Text("Book a slot",
               style: GoogleFonts.poppins(
                   fontSize: 16, fontWeight: FontWeight.w600, color: titleText)),
           const SizedBox(height: 14),
-
-          // Day pills
           Text("Day",
               style: GoogleFonts.poppins(
                   fontSize: 14,
                   color: titleText.withOpacity(0.9),
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 10),
-
           SizedBox(
             height: 72,
             child: ListView.separated(
@@ -611,26 +552,20 @@ class _BookingScreenState extends State<BookingScreen> {
               },
             ),
           ),
-
           const SizedBox(height: 14),
-
-          // Time selector
           Text("Time",
               style: GoogleFonts.poppins(
                   fontSize: 14,
                   color: titleText.withOpacity(0.9),
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 10),
-
-          // 💡 TIME SELECTION CONTAINER CHANGE:
           GestureDetector(
             onTap: _pickTime,
             child: Container(
               height: 48,
               padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
-                // Change background color to light theme
-                color: cardBg, // Use cardBg (white) for light theme
+                color: cardBg,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey.shade300),
                 boxShadow: [
@@ -647,7 +582,6 @@ class _BookingScreenState extends State<BookingScreen> {
                     selectedTime.format(context).toLowerCase(),
                     style: GoogleFonts.poppins(
                         fontSize: 15,
-                        // Change text color to dark theme
                         color: titleText,
                         fontWeight: FontWeight.w500),
                   ),
@@ -658,10 +592,7 @@ class _BookingScreenState extends State<BookingScreen> {
               ),
             ),
           ),
-
           const SizedBox(height: 18),
-
-          // Availability & Price row (card row)
           Row(
             children: [
               Column(
@@ -672,7 +603,7 @@ class _BookingScreenState extends State<BookingScreen> {
                           GoogleFonts.poppins(fontSize: 12, color: subtleText)),
                   const SizedBox(height: 6),
                   Text(
-                      "Cars: $availableCarSlots  •  Bikes: $availableBikeSlots",
+                      "Cars: $availableCarSlots  •  Bikes: $availableBikeSlots",
                       style: GoogleFonts.poppins(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -696,9 +627,7 @@ class _BookingScreenState extends State<BookingScreen> {
               ),
             ],
           ),
-
           const SizedBox(height: 18),
-          // extra spacing so the scroll content doesn't clash with fixed CTA
           SizedBox(height: max(40.0, 60)),
         ],
       ),
@@ -711,32 +640,22 @@ class _BookingScreenState extends State<BookingScreen> {
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      // Bottom nav is handled by sheet CTA; page-level SafeArea ensures notch & dynamic island safety
       body: SafeArea(
         top: true,
         bottom: true,
         child: Stack(
           children: [
-            // background color (fills full area inside SafeArea)
             Container(color: backgroundColor),
-
-            // top image (positioned)
             LayoutBuilder(builder: (context, constraints) {
               return _buildTopImage(constraints.maxHeight);
             }),
-
-            // Draggable sheet (keeps content centered and notch-safe)
-            // Draggable sheet (keeps content centered and notch-safe)
             DraggableScrollableSheet(
               controller: _draggableController,
-
-              // FINAL PERFECT SNAP CONFIG
               initialChildSize: 0.60,
               minChildSize: 0.60,
               maxChildSize: 0.90,
               snap: true,
               snapSizes: const [0.60, 0.90],
-
               builder: (context, scrollController) {
                 return Container(
                   decoration: BoxDecoration(
